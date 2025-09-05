@@ -37,10 +37,6 @@ def setup_data():
             zip_ref.extractall(".")
     return DATA_DIR
 
-# Load precomputed SMT resources with memory mapping
-lm_dict = joblib.load(LM_FILE, mmap_mode='r') 
-en_cn_probs = joblib.load(PROB_FILE, mmap_mode='r') 
-
 nltk.data.path.append(NLTK_DIR)  # point NLTK to pre-downloaded folder
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
@@ -49,8 +45,9 @@ lemmatizer = WordNetLemmatizer()
 
 # Call setup_data first
 data_dir = setup_data()
-
 dict_path = os.path.join(data_dir, "filtered.json")
+lm_dict = joblib.load(LM_FILE, mmap_mode='r') 
+en_cn_probs = joblib.load(PROB_FILE, mmap_mode='r') 
 
 # Load JSON -> Dictionary
 @st.cache_resource
