@@ -407,7 +407,7 @@ if st.button("Translate"):
             
             
         # Running Google Translator
-        google_output = GoogleTranslator(source="en", target="zh-cn").translate(google_input)
+        google_output = GoogleTranslator(source="en", target="zh-CN").translate(google_input)
         st.write(f"Google Output\t: {google_output}")
 
         if reference:
