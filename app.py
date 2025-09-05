@@ -20,18 +20,19 @@ nltk.download('stopwords')
 
 DATA_URL = "https://github.com/halleyIsStressed/Translation_Method_Comparitor/releases/download/v1.0/data.zip"
 
-# Extract to ./data/ if it doesn't exist
-if not os.path.exists("data"):
-    st.write("Downloading data files...")
-    r = requests.get(DATA_URL)
-    with open("data.zip", "wb") as f:
-        f.write(r.content)
+DATA_PATH = "data"
 
-    st.write("Extracting data files...")
-    with zipfile.ZipFile("data.zip", "r") as zip_ref:
-        zip_ref.extractall(".")
-
-    st.write("Data ready!")
+@st.cache_resource
+def setup_data():
+    if not os.path.exists(DATA_PATH):
+        st.write("Downloading and extracting data... (this may take a while)")
+        r = requests.get(DATA_URL, stream=True)
+        with open("data.zip", "wb") as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                f.write(chunk)
+        with zipfile.ZipFile("data.zip", "r") as zip_ref:
+            zip_ref.extractall(".")
+    return DATA_PATH
 
 
 # Load JSON -> Dictionary
