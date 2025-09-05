@@ -411,6 +411,9 @@ if translate_btn and input_sentence:
     translated_tokens = nmtModel.generate(**inputs)
     nmt_output = nmtTokenizer.decode(translated_tokens[0], skip_special_tokens=True)
 
+    # Running Google Translation
+    google_output = GoogleTranslator(source="en", target="zh-CN").translate(google_input)
+    
     # Display translation results 
     st.markdown("### Translation Results")
     
