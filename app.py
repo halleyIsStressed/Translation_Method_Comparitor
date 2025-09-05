@@ -14,9 +14,9 @@ import math
 import json
 import re
 import os
-nltk.download('punkt')
-nltk.download('punkt_tab')
-nltk.download('stopwords')
+nltk.download('punkt', quiet=True)
+nltk.download('punkt_tab', quiet=True)
+nltk.download('stopwords', quiet=True)
 
 
 DATA_URL = "https://github.com/halleyIsStressed/Translation_Method_Comparitor/releases/download/v1.0/data.zip"
@@ -54,6 +54,7 @@ def load_dictionary(file_path):
     return dictionary
 
 dictionary = load_dictionary(dict_path)
+
 
 # 3. Clean the translated text
 
