@@ -383,7 +383,7 @@ with col1:
     translate_btn = st.button("Translate")  # RBMT/NMT/Google
 
 with col2:
-    smt_btn = st.button("Run SMT Translation (Warning, this could crash the app!)")
+    smt_btn = st.button("Run SMT method (Warning, could crash!)")
 
 # --- Translation outputs ---
 if translate_btn and input_sentence:
