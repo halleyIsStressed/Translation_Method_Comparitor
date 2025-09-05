@@ -1,7 +1,5 @@
 from transformers import MarianMTModel, MarianTokenizer
 from transformers import pipeline
-from google.colab import files
-from google.colab import drive
 from googletrans import Translator as gt
 from deep_translator import GoogleTranslator
 from nltk.stem import WordNetLemmatizer
