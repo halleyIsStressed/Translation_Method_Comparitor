@@ -301,14 +301,11 @@ nltk.data.path.append(NLTK_DIR)
 # ------------------------
 @st.cache_resource
 def load_smt_resources(lm_path=LM_FILE, probs_path=PROB_FILE):
-    """
-    Load precomputed SMT resources from joblib files.
-    Returns:
-        lm_dict: n-gram language model (dict)
-        en_cn_probs: English→Chinese probability dictionary (dict)
-    """
+    st.write("Loading LM.")
     lm_dict = joblib.load(lm_path)
+    st.write("Loading PROB.")
     en_cn_probs = joblib.load(probs_path)
+    
     return lm_dict, en_cn_probs
 
 lm_dict, en_cn_probs = load_smt_resources()
