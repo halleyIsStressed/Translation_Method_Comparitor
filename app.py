@@ -385,13 +385,12 @@ with col1:
 with col2:
     smt_btn = st.button("Run SMT method (Warning, could crash!)")
 
-# --- Translation outputs ---
 if translate_btn and input_sentence:
     rbmt_input = input_sentence
     nmt_input = input_sentence
     google_input = input_sentence
 
-    # --- RBMT ---
+    # Running RBMT Translation
     def split_into_clauses(sentence):
         clauses = re.split(r'[,.!?;]| and | or ', sentence)
         return [c.strip() for c in clauses if c.strip()]
@@ -406,41 +405,44 @@ if translate_btn and input_sentence:
         translated_clauses = [generate_translation(c) for c in clauses]
         rbmt_output = "，".join(translated_clauses)
 
-    st.write(f"RBMT Output\t: {rbmt_output}")
 
-    # --- NMT ---
+    # Running NMT Translation
     inputs = nmtTokenizer(nmt_input, return_tensors="pt", padding=True, truncation=True)
     translated_tokens = nmtModel.generate(**inputs)
     nmt_output = nmtTokenizer.decode(translated_tokens[0], skip_special_tokens=True)
-    st.write(f"NMT Output\t: {nmt_output}")
 
-    # --- Google ---
-    google_output = GoogleTranslator(source="en", target="zh-CN").translate(google_input)
-    st.write(f"Google Output\t: {google_output}")
-
-    # BLEU scores
+    # Display translation results 
+    st.markdown("### Translation Results")
+    
+    st.markdown(f"**RBMT Output:** {rbmt_output}")
+    st.markdown(f"**NMT Output:** {nmt_output}")
+    st.markdown(f"**Google Output:** {google_output}")
+    
     if reference:
-        rbmt_bleu   = sacrebleu.sentence_bleu(rbmt_output, [reference], tokenize='zh')
-        nmt_bleu    = sacrebleu.sentence_bleu(nmt_output, [reference], tokenize='zh')
-        google_bleu = sacrebleu.sentence_bleu(google_output, [reference], tokenize='zh')
-        st.write(f"RBMT BLEU \t: {rbmt_bleu.score:.2f}")
-        st.write(f"NMT BLEU \t: {nmt_bleu.score:.2f}")
-        st.write(f"Google BLEU \t: {google_bleu.score:.2f}")
+        st.markdown("### BLEU Scores")
+        st.markdown(f"- **RBMT BLEU:** {rbmt_bleu.score:.2f}")
+        st.markdown(f"- **NMT BLEU:** {nmt_bleu.score:.2f}")
+        st.markdown(f"- **Google BLEU:** {google_bleu.score:.2f}")
     else:
-        st.write("No reference provided, BLEU Score calculation skipped.")
+        st.markdown("No reference provided, BLEU Score calculation skipped.")
 
-# --- SMT translation ---
+# Running SMT Translation
 if smt_btn and input_sentence:
     lm_dict, en_cn_probs = load_smt_resources()  # Lazy load
     smt_input = re.sub(r'[^\w\s]', '', input_sentence)
     smt_output = sentence_decode(smt_input, lm_dict, en_cn_probs)
-    st.write(f"SMT Output\t: {smt_output}")
 
+    # Display SMT results 
+    st.markdown("### SMT Translation Result")
+    
+    smt_output = sentence_decode(smt_input, lm_dict, en_cn_probs)
+    st.markdown(f"**SMT Output:** {smt_output}")
+    
     if reference:
         smt_bleu = sacrebleu.sentence_bleu(smt_output, [reference], tokenize='zh')
-        st.write(f"SMT BLEU \t: {smt_bleu.score:.2f}")
+        st.markdown(f"**SMT BLEU:** {smt_bleu.score:.2f}")
     else:
-        st.write("No reference provided, BLEU Score calculation skipped.")
+        st.markdown("No reference provided, BLEU Score calculation skipped.")
 
 
 
