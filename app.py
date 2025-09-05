@@ -1,9 +1,8 @@
 from transformers import MarianMTModel, MarianTokenizer
-from transformers import pipeline
-from googletrans import Translator as gt
 from deep_translator import GoogleTranslator
 from nltk.stem import WordNetLemmatizer
 from collections import defaultdict
+from transformers import pipeline
 
 import streamlit as st
 import itertools
@@ -478,15 +477,14 @@ if st.button("Translate"):
             
             
         # Running Google Translator
-        google_translator = gt()
-        google_output = google_translator.translate(google_input, dest="zh-cn")
-        st.write(f"Google Output\t: {google_output.text}")
+        google_output = GoogleTranslator(source="en", target="zh-cn").translate(google_input)
+        st.write(f"Google Output\t: {google_output}")
 
         if reference:
             rbmt_bleu   = sacrebleu.sentence_bleu(rbmt_output, [reference], tokenize='zh')
             smt_bleu    = sacrebleu.sentence_bleu(sentence_decode(smt_input), [reference], tokenize='zh')
             nmt_bleu    = sacrebleu.sentence_bleu(nmt_output, [reference], tokenize='zh')
-            google_bleu = sacrebleu.sentence_bleu(google_output.text, [reference], tokenize='zh')
+            google_bleu = sacrebleu.sentence_bleu(google_output, [reference], tokenize='zh')
 
             print(f"\nRBMT BLEU \t: {rbmt_bleu.score:.2f}")
             print(f"SMT BLEU \t: {smt_bleu.score:.2f}")
