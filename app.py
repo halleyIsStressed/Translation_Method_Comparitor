@@ -46,8 +46,17 @@ lemmatizer = WordNetLemmatizer()
 # Call setup_data first
 data_dir = setup_data()
 dict_path = os.path.join(data_dir, "filtered.json")
-lm_dict = joblib.load(LM_FILE, mmap_mode='r') 
-en_cn_probs = joblib.load(PROB_FILE, mmap_mode='r') 
+
+@st.cache_resource
+def load_smt_resources(lm_path=LM_FILE, probs_path=PROB_FILE):
+    # Ensure data folder exists (optional if already handled)
+    os.makedirs(DATA_DIR, exist_ok=True)
+
+    # Memory-mapped loading for large objects
+    lm_dict = joblib.load(lm_path, mmap_mode='r')
+    en_cn_probs = joblib.load(probs_path, mmap_mode='r')
+
+    return lm_dict, en_cn_probs 
 
 # Load JSON -> Dictionary
 @st.cache_resource
@@ -298,36 +307,20 @@ nmtTokenizer, nmtModel = load_nmt_model()
 NLTK_DIR = "./nltk"
 nltk.data.path.append(NLTK_DIR)
 
-# ------------------------
-# SMT Resources Loading
-# ------------------------
-def load_smt_resources(lm_path=LM_FILE, probs_path=PROB_FILE):
-    st.write("Loading LM.")
-    lm_dict = joblib.load(lm_path)
-    st.write("Loading PROB.")
-    en_cn_probs = joblib.load(probs_path)
-    
-    return lm_dict, en_cn_probs
-
-lm_dict, en_cn_probs = load_smt_resources()
-
-# ------------------------
-# Helper functions
-# ------------------------
 def ngram_lm_score(sentence, lm_dict):
     words = sentence.split()
     score = 0.0
     for i, word in enumerate(words):
         score += lm_dict[1].get(word, -10.0)
         if i > 0:
-            bigram = words[i-1] + " " + words[i]
+            bigram = f"{words[i-1]} {words[i]}"
             score += lm_dict[2].get(bigram, -5.0)
         if i > 1:
-            trigram = words[i-2] + " " + words[i-1] + " " + words[i]
+            trigram = f"{words[i-2]} {words[i-1]} {words[i]}"
             score += lm_dict[3].get(trigram, -2.5)
     return score
 
-def translate_word(english_word, probability_threshold=0.0):
+def translate_word(english_word, en_cn_probs, probability_threshold=0.0):
     english_word = english_word.lower()
     translations = {
         zh_word: prob
@@ -336,10 +329,10 @@ def translate_word(english_word, probability_threshold=0.0):
     }
     return dict(sorted(translations.items(), key=lambda item: item[1], reverse=True))
 
-def sentence_decode(eng_sentence):
+def sentence_decode(eng_sentence, lm_dict, en_cn_probs):
     tokens = nltk.word_tokenize(eng_sentence.lower())
     u_tokens = sorted(set(tokens), key=tokens.index)
-    translations = {token: list(translate_word(token).keys()) for token in u_tokens}
+    translations = {token: list(translate_word(token, en_cn_probs).keys()) for token in u_tokens}
 
     # Generate all translation combinations
     translation_options = [translations.get(token, []) for token in u_tokens]
