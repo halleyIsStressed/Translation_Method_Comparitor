@@ -18,6 +18,7 @@ import os
 DATA_URL = "https://github.com/halleyIsStressed/Translation_Method_Comparitor/releases/download/v1.0/data.zip"
 DATA_DIR = "./data" 
 NLTK_DIR = "./nltk"
+FILTERED_JSON = os.path.join(DATA_DIR, "filtered.json")
 
 @st.cache_resource
 def setup_data():
@@ -39,7 +40,6 @@ from nltk.corpus import wordnet
 # Call setup_data first
 data_dir = setup_data()
 
-# Now you can reference any file inside the data folder:
 dict_path = os.path.join(data_dir, "filtered.json")
 
 # Load JSON -> Dictionary
