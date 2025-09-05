@@ -24,9 +24,6 @@ NMT_MODEL = os.path.join(DATA_DIR, "fine_tuned_marian")
 LM_FILE = os.path.join(DATA_DIR, "chinese_lm.joblib")
 PROB_FILE = os.path.join(DATA_DIR, "en_cn_probs.joblib")
 
-# Load precomputed SMT resources with memory mapping
-lm_dict = joblib.load(LM_FILE, mmap_mode='r') 
-en_cn_probs = joblib.load(PROB_FILE, mmap_mode='r') 
 
 @st.cache_resource
 def setup_data():
@@ -39,6 +36,10 @@ def setup_data():
         with zipfile.ZipFile(zip_path, "r") as zip_ref:
             zip_ref.extractall(".")
     return DATA_DIR
+
+# Load precomputed SMT resources with memory mapping
+lm_dict = joblib.load(LM_FILE, mmap_mode='r') 
+en_cn_probs = joblib.load(PROB_FILE, mmap_mode='r') 
 
 nltk.data.path.append(NLTK_DIR)  # point NLTK to pre-downloaded folder
 from nltk.corpus import stopwords
