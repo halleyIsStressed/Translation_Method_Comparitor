@@ -323,30 +323,73 @@ def generate_translation(sentence):
 input_sentence = ""
 
 # Loading the NMT model
-nmtTokenizer = MarianTokenizer.from_pretrained("./data/MyDrive/AI Assignment Colab/data/fine_tuned_marian")
-nmtModel = MarianMTModel.from_pretrained("./data/MyDrive/AI Assignment Colab/data/fine_tuned_marian")
+nmtTokenizer = MarianTokenizer.from_pretrained("./data/MyDrive/Translation_Method_Comparitor/data/fine_tuned_marian")
+nmtModel = MarianMTModel.from_pretrained("./data/MyDrive/Translation_Method_Comparitor/data/fine_tuned_marian")
 
-# Loading the SMT model
-model = kenlm.Model('./data/MyDrive/AI Assignment Colab/data/Chinese_LM.arpa')
-alpha = 1
-beta = 1
-with open("./data/MyDrive/AI Assignment Colab/data/En_Cn_Probs.json", "r", encoding="utf-8") as f:
+# === Load ARPA LM into dictionaries ===
+def load_arpa(filepath):
+    lm = {1: {}, 2: {}, 3: {}}
+    order = 0
+    with open(filepath, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("\\"):
+                # Detect which n-gram section we're in
+                if line.startswith("\\1-grams"):
+                    order = 1
+                elif line.startswith("\\2-grams"):
+                    order = 2
+                elif line.startswith("\\3-grams"):
+                    order = 3
+                continue
+            parts = line.split("\t")
+            if len(parts) >= 2 and order in [1, 2, 3]:
+                try:
+                    log_prob = float(parts[0])
+                    ngram = parts[1]
+                    lm[order][ngram] = log_prob
+                except ValueError:
+                    continue
+    return lm
+
+# === N-gram scoring (replacement for kenlm.score) ===
+def ngram_lm_score(sentence, lm_dict):
+    words = sentence.split()
+    score = 0.0
+    for i, word in enumerate(words):
+        # Unigram
+        score += lm_dict[1].get(word, -10.0)
+
+        # Bigram
+        if i > 0:
+            bigram = words[i-1] + " " + words[i]
+            score += lm_dict[2].get(bigram, -5.0)
+
+        # Trigram
+        if i > 1:
+            trigram = words[i-2] + " " + words[i-1] + " " + words[i]
+            score += lm_dict[3].get(trigram, -2.5)
+    return score
+
+# === Load resources ===
+lm_dict = load_arpa("./data/MyDrive/Translation_Method_Comparitor/data/Chinese_LM.arpa")
+with open("./data/MyDrive/Translation_Method_Comparitor/data/En_Cn_Probs.json", "r", encoding="utf-8") as f:
     en_cn_probs = json.load(f)
 
+alpha = 0.5
+beta = 2.0
+
+# === Word translation lookup ===
 def translate_word(english_word, probability_threshold=0.0):
     english_word = english_word.lower()
-
-    with open("./data/MyDrive/AI Assignment Colab/data/En_Cn_Probs.json", "r", encoding="utf-8") as f:
-        word_probabilities = json.load(f)
-
     translations = {
         zh_word: prob
-        for zh_word, prob in word_probabilities.get(english_word, {}).items()
+        for zh_word, prob in en_cn_probs.get(english_word, {}).items()
         if prob >= probability_threshold
     }
-
     return dict(sorted(translations.items(), key=lambda item: item[1], reverse=True))
 
+# === SMT decoder ===
 def sentence_decode(eng_sentence):
     tokens = nltk.word_tokenize(eng_sentence.lower())
 
@@ -358,7 +401,7 @@ def sentence_decode(eng_sentence):
     translation_options = [translations.get(token, []) for token in u_tokens]
     translation_iterations = {" ".join(combination) for combination in itertools.product(*translation_options)}
 
-    # Handle repeated words by creating variations with fewer duplicates
+    # Handle repeated words (drop duplicates)
     new_iterations = set()
     for sentence in translation_iterations:
         words = sentence.split()
@@ -373,32 +416,24 @@ def sentence_decode(eng_sentence):
 
     translation_iterations |= new_iterations
 
-    # Save all translation candidates
-    with open("Trans_Chinese_Iter.txt", "w", encoding="utf-8") as f:
-        for i, sentence in enumerate(sorted(translation_iterations), 1):
-            f.write(f"{sentence}\n")
-
-    # Score candidates with KenLM + word translation probabilities
+    # Score candidates with translation probs + n-gram LM
     scored_sentences = []
-    with open("Trans_Iter_Score.txt", "w", encoding="utf-8") as f:
-        for sentence in sorted(translation_iterations):
-            words = sentence.split()
+    for sentence in sorted(translation_iterations):
+        words = sentence.split()
 
-            translation_prob = 1.0
-            for en_word, zh_word in zip(u_tokens, words):
-                prob = en_cn_probs.get(en_word, {}).get(zh_word, 0.0)
-                translation_prob *= prob if prob > 0 else 1e-9
-            log_prob = math.log(translation_prob)
+        translation_prob = 1.0
+        for en_word, zh_word in zip(u_tokens, words):
+            prob = en_cn_probs.get(en_word, {}).get(zh_word, 0.0)
+            translation_prob *= prob if prob > 0 else 1e-9
+        log_prob = math.log(translation_prob)
 
-            lm_score = model.score(sentence)
-            final_score = alpha * log_prob + beta * lm_score
-            scored_sentences.append((sentence, final_score))
+        lm_score_val = ngram_lm_score(sentence, lm_dict)
+        final_score = alpha * log_prob + beta * lm_score_val
+        scored_sentences.append((sentence, final_score))
 
-            f.write(f"{sentence}\t{final_score:.6f}\n")
-
-    # Print top 5 by final score
-    top_5 = sorted(scored_sentences, key=lambda x: x[1], reverse=True)[:1]
-    for sentence, score in top_5:
+    # Pick best candidate
+    top5 = sorted(scored_sentences, key=lambda x: x[1], reverse=True)[:1]
+    for sentence, score in top5:
         return sentence.replace(" ", "")
 
 
