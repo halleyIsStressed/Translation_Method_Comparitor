@@ -400,12 +400,6 @@ if st.button("Translate"):
             
         st.write(f"RBMT Output\t: {rbmt_output}")
             
-            
-        # Running SMT Translator
-        smt_input = re.sub(r'[^\w\s]', '', smt_input)
-        st.write(f"SMT Output\t: {sentence_decode(smt_input)}")
-            
-            
         # Running NMT Translator
         inputs = nmtTokenizer(nmt_input, return_tensors="pt", padding=True, truncation=True)
         translated_tokens = nmtModel.generate(**inputs)
