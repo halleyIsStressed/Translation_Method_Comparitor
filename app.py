@@ -298,7 +298,7 @@ ALPHA = 0.5
 BETA = 2.0
 
 @st.cache_resource
-def load_smt_resources(arpa_path=LM_ARPA_FILE, probs_path=EN_CN_PROBS_FILE):
+def load_smt_resources(arpa_path=ARPA_FILE, probs_path=PROB_FILE):
     # Load ARPA n-gram LM
     lm = {1: {}, 2: {}, 3: {}}
     order = 0
