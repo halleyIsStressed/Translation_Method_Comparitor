@@ -422,6 +422,10 @@ if translate_btn and input_sentence:
     st.markdown(f"**Google Output:** {google_output}")
     
     if reference:
+        rbmt_bleu = sacrebleu.sentence_bleu(rbmt_output, [reference], tokenize='zh') 
+        nmt_bleu = sacrebleu.sentence_bleu(nmt_output, [reference], tokenize='zh') 
+        google_bleu = sacrebleu.sentence_bleu(google_output, [reference], tokenize='zh')
+        
         st.markdown("### BLEU Scores")
         st.markdown(f"- **RBMT BLEU:** {rbmt_bleu.score:.2f}")
         st.markdown(f"- **NMT BLEU:** {nmt_bleu.score:.2f}")
