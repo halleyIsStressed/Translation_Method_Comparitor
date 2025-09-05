@@ -9,6 +9,7 @@ import itertools
 import sacrebleu
 import requests
 import zipfile
+import joblib
 import nltk
 import math
 import json
@@ -297,7 +298,7 @@ PROB_FILE = "./data/En_Cn_Probs.json"
 ALPHA = 0.5
 BETA = 2.0
 
-@st.cache_resource
+
 def load_smt_resources(arpa_path=ARPA_FILE, probs_path=PROB_FILE):
     # Load ARPA n-gram LM
     lm = {1: {}, 2: {}, 3: {}}
