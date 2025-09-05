@@ -373,8 +373,8 @@ def sentence_decode(eng_sentence, lm_dict, en_cn_probs):
 
 st.title("Practical Comparison: RBMT vs. SMT vs. NMT vs. Google Translate")
 
-input_sentence = st.text.input("Please enter an English sentence:")
-reference = st.text.input("Enter the Reference Translation: ")
+input_sentence = st.text_input("Please enter an English sentence:")
+reference = st.text_input("Enter the Reference Translation: ")
 
 if st.button("Translate"):
     if input_sentence:
