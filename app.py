@@ -299,7 +299,6 @@ nltk.data.path.append(NLTK_DIR)
 # ------------------------
 # SMT Resources Loading
 # ------------------------
-@st.cache_resource
 def load_smt_resources(lm_path=LM_FILE, probs_path=PROB_FILE):
     st.write("Loading LM.")
     lm_dict = joblib.load(lm_path)
