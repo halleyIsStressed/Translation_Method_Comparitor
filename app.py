@@ -21,8 +21,8 @@ DATA_DIR = "./data"
 NLTK_DIR = "./nltk"
 FILTERED_JSON = os.path.join(DATA_DIR, "filtered.json")
 NMT_MODEL = os.path.join(DATA_DIR, "fine_tuned_marian")
-ARPA_FILE = os.path.join(DATA_DIR, "Chinese_LM.arp")
-PROB_FILE = os.path.join(DATA_DIR, "En_Cn_Probs.json")
+LM_FILE = os.path.join(DATA_DIR, "chinese_lm.joblib")
+PROB_FILE = os.path.join(DATA_DIR, "en_cn_probs.joblib")
 
 @st.cache_resource
 def setup_data():
@@ -291,43 +291,25 @@ def load_nmt_model(model_dir=NMT_MODEL):
 nmtTokenizer, nmtModel = load_nmt_model()
 
 # ------------------------
+# Preload NLTK data (if needed)
+# ------------------------
+NLTK_DIR = "./nltk"
+nltk.data.path.append(NLTK_DIR)
+
+# ------------------------
 # SMT Resources Loading
 # ------------------------
-ARPA_FILE = "./data/Chinese_LM.arpa"
-PROB_FILE = "./data/En_Cn_Probs.json"
-ALPHA = 0.5
-BETA = 2.0
-
-
-def load_smt_resources(arpa_path=ARPA_FILE, probs_path=PROB_FILE):
-    # Load ARPA n-gram LM
-    lm = {1: {}, 2: {}, 3: {}}
-    order = 0
-    with open(arpa_path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("\\"):
-                if line.startswith("\\1-grams"):
-                    order = 1
-                elif line.startswith("\\2-grams"):
-                    order = 2
-                elif line.startswith("\\3-grams"):
-                    order = 3
-                continue
-            parts = line.split("\t")
-            if len(parts) >= 2 and order in [1, 2, 3]:
-                try:
-                    log_prob = float(parts[0])
-                    ngram = parts[1]
-                    lm[order][ngram] = log_prob
-                except ValueError:
-                    continue
-
-    # Load English→Chinese probabilities
-    with open(probs_path, "r", encoding="utf-8") as f:
-        en_cn_probs = json.load(f)
-
-    return lm, en_cn_probs
+@st.cache_resource
+def load_smt_resources(lm_path=LM_FILE, probs_path=PROB_FILE):
+    """
+    Load precomputed SMT resources from joblib files.
+    Returns:
+        lm_dict: n-gram language model (dict)
+        en_cn_probs: English→Chinese probability dictionary (dict)
+    """
+    lm_dict = joblib.load(lm_path)
+    en_cn_probs = joblib.load(probs_path)
+    return lm_dict, en_cn_probs
 
 lm_dict, en_cn_probs = load_smt_resources()
 
@@ -361,7 +343,7 @@ def sentence_decode(eng_sentence):
     u_tokens = sorted(set(tokens), key=tokens.index)
     translations = {token: list(translate_word(token).keys()) for token in u_tokens}
 
-    # Generate translation combinations
+    # Generate all translation combinations
     translation_options = [translations.get(token, []) for token in u_tokens]
     translation_iterations = {" ".join(comb) for comb in itertools.product(*translation_options)}
 
@@ -392,7 +374,7 @@ def sentence_decode(eng_sentence):
         final_score = ALPHA * log_prob + BETA * lm_score_val
         scored_sentences.append((sentence, final_score))
 
-    # Pick best candidate
+    # Return top candidate
     top1 = sorted(scored_sentences, key=lambda x: x[1], reverse=True)[:1]
     for sentence, _ in top1:
         return sentence.replace(" ", "")
