@@ -14,11 +14,18 @@ import math
 import json
 import re
 import os
-nltk.download('punkt', quiet=True)
-nltk.download('punkt_tab', quiet=True)
-nltk.download('stopwords', quiet=True)
-nltk.download("wordnet", quiet=True)
-nltk.download("omw-1.4", quiet=True)
+
+# Add the path to the pre-downloaded NLTK data
+nltk.data.path.append("./data/nltk_data")
+
+# Now you can safely use NLTK without downloading
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+
+stop_words = stopwords.words("english")
+text = "This is an example sentence."
+tokens = word_tokenize(text)
+tokens = [t for t in tokens if t.lower() not in stop_words]
 
 
 DATA_URL = "https://github.com/halleyIsStressed/Translation_Method_Comparitor/releases/download/v1.0/data.zip"
