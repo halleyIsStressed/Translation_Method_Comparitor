@@ -481,7 +481,7 @@ if st.button("Translate"):
             
         # Running Google Translator
         google_translator = gt()
-        google_output = await google_translator.translate(google_input, dest="zh-cn")
+        google_output = google_translator.translate(google_input, dest="zh-cn")
         st.write(f"Google Output\t: {google_output.text}")
 
         if reference:
