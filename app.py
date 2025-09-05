@@ -9,6 +9,7 @@ from collections import defaultdict
 
 import itertools
 import sacrebleu
+import streamlit
 import requests
 import kenlm
 import nltk
@@ -401,58 +402,62 @@ def sentence_decode(eng_sentence):
         return sentence.replace(" ", "")
 
 
+st.title("Practical Comparison: RBMT vs. SMT vs. NMT vs. Google Translate")
 
-input_sentence = input("Please enter an English sentence:")
-reference = input("Enter the Reference Translation: ")
-print("")
+input_sentence = st.text.input("Please enter an English sentence:")
+reference = st.text.input("Enter the Reference Translation: ")
 
-rbmt_input = input_sentence
-smt_input = input_sentence
-nmt_input = input_sentence
-google_input = input_sentence
+if st.button("Translate")
+    if input_sentence:
+        rbmt_input = input_sentence
+        smt_input = input_sentence
+        nmt_input = input_sentence
+        google_input = input_sentence
 
-# Running RBMT Translator
-def split_into_clauses(sentence):
-    clauses = re.split(r'[,.!?;]| and | or ', sentence)
-    return [c.strip() for c in clauses if c.strip()]
+         # Running RBMT Translator
+        def split_into_clauses(sentence):
+            clauses = re.split(r'[,.!?;]| and | or ', sentence)
+            return [c.strip() for c in clauses if c.strip()]
+            
+        rbmt_input = expand_contractions(rbmt_input)
+        words = analyze(rbmt_input)
 
-rbmt_input = expand_contractions(rbmt_input)
-words = analyze(rbmt_input)
+        if len(words) <= 8:
+            rbmt_output = generate_translation(rbmt_input)
+        else:
+            clauses = split_into_clauses(rbmt_input)
+            translated_clauses = [generate_translation(c) for c in clauses]
+            rbmt_output = "，".join(translated_clauses)
+            
+        st.write(f"RBMT Output\t: {rbmt_output}")
+            
+            
+        # Running SMT Translator
+        smt_input = re.sub(r'[^\w\s]', '', smt_input)
+        st.write(f"SMT Output\t: {sentence_decode(smt_input)}")
+            
+            
+        # Running NMT Translator
+        inputs = nmtTokenizer(nmt_input, return_tensors="pt", padding=True, truncation=True)
+        translated_tokens = nmtModel.generate(**inputs)
+        nmt_output = nmtTokenizer.decode(translated_tokens[0], skip_special_tokens=True)
+        st.write(f"NMT Output\t: {nmt_output}")
+            
+            
+        # Running Google Translator
+        google_translator = gt()
+        google_output = await google_translator.translate(google_input, dest="zh-cn")
+        st.write(f"Google Output\t: {google_output.text}")
 
-if len(words) <= 8:
-  rbmt_output = generate_translation(rbmt_input)
-else:
-  clauses = split_into_clauses(rbmt_input)
-  translated_clauses = [generate_translation(c) for c in clauses]
-  rbmt_output = "，".join(translated_clauses)
+        if reference:
+            rbmt_bleu   = sacrebleu.sentence_bleu(rbmt_output, [reference], tokenize='zh')
+            smt_bleu    = sacrebleu.sentence_bleu(sentence_decode(smt_input), [reference], tokenize='zh')
+            nmt_bleu    = sacrebleu.sentence_bleu(nmt_output, [reference], tokenize='zh')
+            google_bleu = sacrebleu.sentence_bleu(google_output.text, [reference], tokenize='zh')
 
-print(f"RBMT Output\t: {rbmt_output}")
-
-
-# Running SMT Translator
-smt_input = re.sub(r'[^\w\s]', '', smt_input)
-print(f"SMT Output\t: {sentence_decode(smt_input)}")
-
-
-# Running NMT Translator
-inputs = nmtTokenizer(nmt_input, return_tensors="pt", padding=True, truncation=True)
-translated_tokens = nmtModel.generate(**inputs)
-nmt_output = nmtTokenizer.decode(translated_tokens[0], skip_special_tokens=True)
-print(f"NMT Output\t: {nmt_output}")
-
-
-# Running Google Translator
-google_translator = gt()
-google_output = await google_translator.translate(google_input, dest="zh-cn")
-print(f"Google Output\t: {google_output.text}")
-
-rbmt_bleu   = sacrebleu.sentence_bleu(rbmt_output, [reference], tokenize='zh')
-smt_bleu    = sacrebleu.sentence_bleu(sentence_decode(smt_input), [reference], tokenize='zh')
-nmt_bleu    = sacrebleu.sentence_bleu(nmt_output, [reference], tokenize='zh')
-google_bleu = sacrebleu.sentence_bleu(google_output.text, [reference], tokenize='zh')
-
-print(f"\nRBMT BLEU \t: {rbmt_bleu.score:.2f}")
-print(f"SMT BLEU \t: {smt_bleu.score:.2f}")
-print(f"NMT BLEU \t: {nmt_bleu.score:.2f}")
-print(f"Google BLEU \t: {google_bleu.score:.2f}")
-
+            print(f"\nRBMT BLEU \t: {rbmt_bleu.score:.2f}")
+            print(f"SMT BLEU \t: {smt_bleu.score:.2f}")
+            print(f"NMT BLEU \t: {nmt_bleu.score:.2f}")
+            print(f"Google BLEU \t: {google_bleu.score:.2f}")
+        else:
+            st.write("No reference provided, BLEU Score calculation skipped.")
