@@ -15,33 +15,26 @@ import json
 import re
 import os
 
-# Add the path to the pre-downloaded NLTK data
-nltk.data.path.append("./data/nltk_data")
-
-# Now you can safely use NLTK without downloading
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
-
-stop_words = stopwords.words("english")
-text = "This is an example sentence."
-tokens = word_tokenize(text)
-tokens = [t for t in tokens if t.lower() not in stop_words]
-
-
 DATA_URL = "https://github.com/halleyIsStressed/Translation_Method_Comparitor/releases/download/v1.0/data.zip"
-DATA_DIR = "data" 
+DATA_DIR = "./data" 
+NLTK_DIR = "./nltk"
 
 @st.cache_resource
 def setup_data():
     if not os.path.exists(DATA_DIR):
-        st.write("Downloading and extracting all data... (this may take a while)")
         r = requests.get(DATA_URL, stream=True)
-        with open("data.zip", "wb") as f:
+        zip_path = "data.zip"
+        with open(zip_path, "wb") as f:
             for chunk in r.iter_content(chunk_size=8192):
                 f.write(chunk)
-        with zipfile.ZipFile("data.zip", "r") as zip_ref:
+        with zipfile.ZipFile(zip_path, "r") as zip_ref:
             zip_ref.extractall(".")
-    return DATA_DIR  
+    return DATA_DIR
+
+nltk.data.path.append(NLTK_DIR)  # point NLTK to pre-downloaded folder
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+from nltk.corpus import wordnet
 
 # Call setup_data first
 data_dir = setup_data()
@@ -50,6 +43,7 @@ data_dir = setup_data()
 dict_path = os.path.join(data_dir, "filtered.json")
 
 # Load JSON -> Dictionary
+@st.cache_resource
 def load_dictionary(file_path):
     with open(file_path, "r", encoding="utf-8") as f:
         raw_data = json.load(f)
@@ -62,7 +56,7 @@ def load_dictionary(file_path):
             dictionary[eng] = trans_list[0]
     return dictionary
 
-dictionary = load_dictionary(dict_path)
+dictionary = load_dictionary(FILTERED_JSON)
 
 
 # 3. Clean the translated text
