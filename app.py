@@ -429,3 +429,8 @@ if st.button("Translate"):
             print(f"Google BLEU \t: {google_bleu.score:.2f}")
         else:
             st.write("No reference provided, BLEU Score calculation skipped.")
+            
+if st.button("Run SMT Translation (Warning, could crash the app!)"):
+    lm_dict, en_cn_probs = load_smt_resources()  # Lazy load
+    output = sentence_decode(user_input, lm_dict, en_cn_probs)
+    st.write(output)
