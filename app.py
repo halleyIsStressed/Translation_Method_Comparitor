@@ -18,7 +18,7 @@ nltk.download('punkt')
 nltk.download('punkt_tab')
 nltk.download('stopwords')
 
-DATA_URL = "https://github.com/<username>/<repo>/releases/download/v1.0/data.zip"
+DATA_URL = "https://github.com/halleyIsStressed/Translation_Method_Comparitor/releases/download/v1.0/data.zip"
 
 # Extract to ./data/ if it doesn't exist
 if not os.path.exists("data"):
