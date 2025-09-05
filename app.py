@@ -379,7 +379,6 @@ reference = st.text_input("Enter the Reference Translation: ")
 if st.button("Translate"):
     if input_sentence:
         rbmt_input = input_sentence
-        smt_input = input_sentence
         nmt_input = input_sentence
         google_input = input_sentence
 
@@ -413,19 +412,25 @@ if st.button("Translate"):
 
         if reference:
             rbmt_bleu   = sacrebleu.sentence_bleu(rbmt_output, [reference], tokenize='zh')
-            smt_bleu    = sacrebleu.sentence_bleu(sentence_decode(smt_input), [reference], tokenize='zh')
             nmt_bleu    = sacrebleu.sentence_bleu(nmt_output, [reference], tokenize='zh')
             google_bleu = sacrebleu.sentence_bleu(google_output, [reference], tokenize='zh')
 
-            print(f"\nRBMT BLEU \t: {rbmt_bleu.score:.2f}")
-            print(f"SMT BLEU \t: {smt_bleu.score:.2f}")
-            print(f"NMT BLEU \t: {nmt_bleu.score:.2f}")
-            print(f"Google BLEU \t: {google_bleu.score:.2f}")
+            st.write(f"RBMT BLEU \t: {rbmt_bleu.score:.2f}")
+            st.write(f"NMT BLEU \t: {nmt_bleu.score:.2f}")
+            st.write(f"Google BLEU \t: {google_bleu.score:.2f}")
         else:
             st.write("No reference provided, BLEU Score calculation skipped.")
             
-if st.button("Run SMT Translation (Warning, could crash the app!)"):
+if st.button("Run SMT Translation (Warning, this could crash the app!)"):
     lm_dict, en_cn_probs = load_smt_resources()  # Lazy load
+    smt_input = input_sentence
     smt_input = re.sub(r'[^\w\s]', '', smt_input)
-    st.write(f"SMT Output\t: {sentence_decode(user_input, lm_dict, en_cn_probs)}")
-    st.write(output)
+    st.write(f"SMT Output\t: {sentence_decode(smt_input, lm_dict, en_cn_probs)}")
+
+    if reference:
+        smt_bleu = sacrebleu.sentence_bleu(sentence_decode(smt_input, lm_dict, en_cn_probs), [reference], tokenize='zh')
+        st.write(f"SMT BLEU \t: {smt_bleu.score:.2f}")
+    else:
+        st.write("No reference provided, BLEU Score calculation skipped.")
+
+
