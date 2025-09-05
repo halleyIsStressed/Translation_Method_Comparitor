@@ -389,7 +389,7 @@ if st.button("Translate"):
             return [c.strip() for c in clauses if c.strip()]
             
         rbmt_input = expand_contractions(rbmt_input)
-        words = analyze(rbmt_input)
+        words = preprocess_sentence(rbmt_input)
 
         if len(words) <= 8:
             rbmt_output = generate_translation(rbmt_input)
