@@ -19,6 +19,9 @@ DATA_URL = "https://github.com/halleyIsStressed/Translation_Method_Comparitor/re
 DATA_DIR = "./data" 
 NLTK_DIR = "./nltk"
 FILTERED_JSON = os.path.join(DATA_DIR, "filtered.json")
+NMT_MODEL = os.path.join(DATA_DIR, "fine_tuned_marian")
+ARPA_FILE = os.path.join(DATA_DIR, "Chinese_LM.arp")
+PROB_FILE = os.path.join(DATA_DIR, "En_Cn_Probs.json")
 
 @st.cache_resource
 def setup_data():
@@ -36,6 +39,7 @@ nltk.data.path.append(NLTK_DIR)  # point NLTK to pre-downloaded folder
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.corpus import wordnet
+lemmatizer = WordNetLemmatizer()
 
 # Call setup_data first
 data_dir = setup_data()
@@ -44,22 +48,43 @@ dict_path = os.path.join(data_dir, "filtered.json")
 
 # Load JSON -> Dictionary
 @st.cache_resource
-def load_dictionary(file_path):
+def load_dataset_dict(file_path=FILTERED_JSON):
     with open(file_path, "r", encoding="utf-8") as f:
         raw_data = json.load(f)
 
-    dictionary = {}
+    dataset_dict = {}
     for entry in raw_data:
         eng = entry.get("word", "").strip().lower()
         trans_list = entry.get("translation", [])
         if isinstance(trans_list, list) and len(trans_list) > 0:
-            dictionary[eng] = trans_list[0]
-    return dictionary
+            dataset_dict[eng] = trans_list[0]
+    return dataset_dict
 
-dictionary = load_dictionary(FILTERED_JSON)
+dataset_dict = load_dataset_dict()
 
+# -----------------------------
+# Utility functions
+# -----------------------------
+ignore_words = ["to", "a", "an", "the"]  # 冠词/虚词忽略
 
-# 3. Clean the translated text
+contractions = {
+    "it's":"it is",
+    "i'm":"i am",
+    "you're":"you are",
+    "we're":"we are",
+    "they're":"they are",
+    "i've":"i have",
+    "you've":"you have",
+    "isn't":"is not",
+    "aren't":"are not",
+    "don't":"do not",
+    "doesn't":"does not",
+}
+
+def expand_contractions(sentence):
+    for k, v in contractions.items():
+        sentence = re.sub(r"\b"+k+r"\b", v, sentence, flags=re.IGNORECASE)
+    return sentence
 
 def _strip_brackets(s: str) -> str:
     s = re.sub(r"【[^】]*】", "", s)
@@ -85,25 +110,8 @@ def clean_translation_text(text):
             return cand
     return pos_pat.sub("", candidates[0].strip()) if candidates else ""
 
-def lookup(word: str) -> str:
-    word = word.lower()
-    raw = dictionary.get(word, "")
-    return clean_translation_text(raw)
-
-lemmatizer = WordNetLemmatizer()
-
-def analyze(sentence):
-    sentence = sentence.lower()
-    sentence = re.sub(r"[^\w\s]", "", sentence)
-    words = sentence.split()
-    words = [lemmatizer.lemmatize(w, pos='v') for w in words]
-    words = [lemmatizer.lemmatize(w, pos='n') for w in words]
-    return words
-
-# RBMT generates translation (最新版)
-
 # -----------------------------
-# 规则字典
+# Word Lookup
 # -----------------------------
 subjects = {"i":"我","you":"你","he":"他","she":"她","we":"我们","they":"他们","it":"它"}
 possessives = {"my":"我的","your":"你的","his":"他的","her":"她的","their":"他们的","our":"我们的"}
@@ -116,9 +124,6 @@ negations = {"not":"不","don't":"不","doesn't":"不","didn't":"没"}
 question_words = {"what":"什么","who":"谁","where":"哪里","when":"什么时候","why":"为什么","how":"怎么"}
 others = {"ok":"好","nice":"美好","hi":"嗨","hello":"你好","friend":"朋友","book":"书","phone":"电话","seat":"座","availability":"有效性","status":"状态","capacity":"容量","class":"班级","verifying":"证明"}
 
-# -----------------------------
-# 固定搭配短语
-# -----------------------------
 fixed_combinations = {
     ("thank","you"):"谢谢",
     ("thanks",):"谢谢",
@@ -135,67 +140,10 @@ fixed_combinations = {
     ("year","old"):"岁"
 }
 
-# -----------------------------
-# 缩写字典
-# -----------------------------
-contractions = {
-    "it's":"it is",
-    "i'm":"i am",
-    "you're":"you are",
-    "we're":"we are",
-    "they're":"they are",
-    "i've":"i have",
-    "you've":"you have",
-    "isn't":"is not",
-    "aren't":"are not",
-    "don't":"do not",
-    "doesn't":"does not",
-}
-
-ignore_words = ["to", "a", "an", "the"]  # 冠词/虚词忽略
-
-def expand_contractions(sentence):
-    for k,v in contractions.items():
-        sentence = re.sub(r"\b"+k+r"\b", v, sentence, flags=re.IGNORECASE)
-    return sentence
-
-# -----------------------------
-# 载入 JSON dataset
-# -----------------------------
-dict_path = "./data/filtered.json"  # 改成你的路径
-with open(dict_path, "r", encoding="utf-8") as f:
-    raw_data = json.load(f)
-
-dataset_dict = {}
-for entry in raw_data:
-    eng = entry.get("word","").strip().lower()
-    trans_list = entry.get("translation", [])
-    if isinstance(trans_list, list) and len(trans_list) > 0:
-        dataset_dict[eng] = trans_list[0]
-
-# -----------------------------
-# clean translation
-# -----------------------------
-def clean_translation_text(text):
-    if isinstance(text, list):
-        text = text[0] if text else ""
-    if not isinstance(text, str):
-        return ""
-    candidates = re.split(r"[;,；，、/]| or ", text)
-    for cand in candidates:
-        cand = re.sub(r"^(?:n|v|vi|vt|adj|adv|prep|conj|pron|abbr|int|interj|art|aux|num|det|modal|phr|idiom)\.\s*", "", cand, flags=re.IGNORECASE)
-        cand = re.sub(r"【[^】]*】|\([^)]*\)|（[^）]*）|\[[^\]]*\]", "", cand).strip()
-        if re.search(r"[\u4e00-\u9fff]", cand):
-            return cand
-    return candidates[0].strip() if candidates else ""
-
-# -----------------------------
-# lookup 函数
-# -----------------------------
-def lookup(word):
+def lookup(word: str) -> str:
     lw = word.lower()
     if lw in ignore_words:
-        return ""   # 冠词忽略
+        return ""
 
     for dic in [subjects, possessives, verbs, adjectives, time_words, connectors, be_verbs, negations, question_words, others]:
         if lw in dic:
@@ -205,30 +153,23 @@ def lookup(word):
         trans = dataset_dict[lw]
         return clean_translation_text(trans)
 
-    # fallback，保证永远返回完整中文
     return "未知词"
 
 # -----------------------------
-# 预处理句子，去掉标点，分词
+# Sentence preprocessing
 # -----------------------------
-def preprocess_sentence(sentence):
-    # 统一替换缩写
+def preprocess_sentence(sentence: str):
     sentence = expand_contractions(sentence)
-    # 去掉所有标点符号，包括句号、逗号等
     sentence = re.sub(r"[^\w\s]", "", sentence)
-    # 小写化
     sentence = sentence.lower()
-    # 分词
     words = sentence.strip().split()
-    # 忽略冠词/虚词
     words = [w for w in words if w not in ignore_words]
     return words
 
-
 # -----------------------------
-# generate 函数（接收完整句子）
+# RBMT Translation
 # -----------------------------
-def generate_translation(sentence):
+def generate_translation(sentence: str) -> str:
     words = preprocess_sentence(sentence)
     result = []
     i = 0
@@ -340,18 +281,31 @@ def generate_translation(sentence):
 input_sentence = ""
 
 # Loading the NMT model
-nmtTokenizer = MarianTokenizer.from_pretrained("./data/fine_tuned_marian")
-nmtModel = MarianMTModel.from_pretrained("./data/fine_tuned_marian")
+@st.cache_resource
+def load_nmt_model(model_dir=NMT_MODEL):
+    tokenizer = MarianTokenizer.from_pretrained(model_dir)
+    model = MarianMTModel.from_pretrained(model_dir)
+    return tokenizer, model
 
-# === Load ARPA LM into dictionaries ===
-def load_arpa(filepath):
+nmtTokenizer, nmtModel = load_nmt_model()
+
+# ------------------------
+# SMT Resources Loading
+# ------------------------
+ARPA_FILE = "./data/Chinese_LM.arpa"
+PROB_FILE = "./data/En_Cn_Probs.json"
+ALPHA = 0.5
+BETA = 2.0
+
+@st.cache_resource
+def load_smt_resources(arpa_path=LM_ARPA_FILE, probs_path=EN_CN_PROBS_FILE):
+    # Load ARPA n-gram LM
     lm = {1: {}, 2: {}, 3: {}}
     order = 0
-    with open(filepath, encoding="utf-8") as f:
+    with open(arpa_path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if not line or line.startswith("\\"):
-                # Detect which n-gram section we're in
                 if line.startswith("\\1-grams"):
                     order = 1
                 elif line.startswith("\\2-grams"):
@@ -367,36 +321,31 @@ def load_arpa(filepath):
                     lm[order][ngram] = log_prob
                 except ValueError:
                     continue
-    return lm
 
-# === N-gram scoring (replacement for kenlm.score) ===
+    # Load English→Chinese probabilities
+    with open(probs_path, "r", encoding="utf-8") as f:
+        en_cn_probs = json.load(f)
+
+    return lm, en_cn_probs
+
+lm_dict, en_cn_probs = load_smt_resources()
+
+# ------------------------
+# Helper functions
+# ------------------------
 def ngram_lm_score(sentence, lm_dict):
     words = sentence.split()
     score = 0.0
     for i, word in enumerate(words):
-        # Unigram
         score += lm_dict[1].get(word, -10.0)
-
-        # Bigram
         if i > 0:
             bigram = words[i-1] + " " + words[i]
             score += lm_dict[2].get(bigram, -5.0)
-
-        # Trigram
         if i > 1:
             trigram = words[i-2] + " " + words[i-1] + " " + words[i]
             score += lm_dict[3].get(trigram, -2.5)
     return score
 
-# === Load resources ===
-lm_dict = load_arpa("./data/Chinese_LM.arpa")
-with open("./data/En_Cn_Probs.json", "r", encoding="utf-8") as f:
-    en_cn_probs = json.load(f)
-
-alpha = 0.5
-beta = 2.0
-
-# === Word translation lookup ===
 def translate_word(english_word, probability_threshold=0.0):
     english_word = english_word.lower()
     translations = {
@@ -406,19 +355,16 @@ def translate_word(english_word, probability_threshold=0.0):
     }
     return dict(sorted(translations.items(), key=lambda item: item[1], reverse=True))
 
-# === SMT decoder ===
 def sentence_decode(eng_sentence):
     tokens = nltk.word_tokenize(eng_sentence.lower())
-
-    # Generate all possible translation combinations
     u_tokens = sorted(set(tokens), key=tokens.index)
     translations = {token: list(translate_word(token).keys()) for token in u_tokens}
 
-    # Generate combinations of Chinese words
+    # Generate translation combinations
     translation_options = [translations.get(token, []) for token in u_tokens]
-    translation_iterations = {" ".join(combination) for combination in itertools.product(*translation_options)}
+    translation_iterations = {" ".join(comb) for comb in itertools.product(*translation_options)}
 
-    # Handle repeated words (drop duplicates)
+    # Remove repeated words
     new_iterations = set()
     for sentence in translation_iterations:
         words = sentence.split()
@@ -430,27 +376,24 @@ def sentence_decode(eng_sentence):
                 new_words = list(words)
                 new_words.remove(word)
                 new_iterations.add(" ".join(new_words))
-
     translation_iterations |= new_iterations
 
-    # Score candidates with translation probs + n-gram LM
+    # Score candidates
     scored_sentences = []
     for sentence in sorted(translation_iterations):
         words = sentence.split()
-
         translation_prob = 1.0
         for en_word, zh_word in zip(u_tokens, words):
             prob = en_cn_probs.get(en_word, {}).get(zh_word, 0.0)
             translation_prob *= prob if prob > 0 else 1e-9
         log_prob = math.log(translation_prob)
-
         lm_score_val = ngram_lm_score(sentence, lm_dict)
-        final_score = alpha * log_prob + beta * lm_score_val
+        final_score = ALPHA * log_prob + BETA * lm_score_val
         scored_sentences.append((sentence, final_score))
 
     # Pick best candidate
-    top5 = sorted(scored_sentences, key=lambda x: x[1], reverse=True)[:1]
-    for sentence, score in top5:
+    top1 = sorted(scored_sentences, key=lambda x: x[1], reverse=True)[:1]
+    for sentence, _ in top1:
         return sentence.replace(" ", "")
 
 
