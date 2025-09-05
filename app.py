@@ -18,22 +18,27 @@ nltk.download('punkt')
 nltk.download('punkt_tab')
 nltk.download('stopwords')
 
-DATA_URL = "https://github.com/halleyIsStressed/Translation_Method_Comparitor/releases/download/v1.0/data.zip"
 
-DATA_PATH = "data"
+DATA_URL = "https://github.com/halleyIsStressed/Translation_Method_Comparitor/releases/download/v1.0/data.zip"
+DATA_DIR = "data" 
 
 @st.cache_resource
 def setup_data():
-    if not os.path.exists(DATA_PATH):
-        st.write("Downloading and extracting data... (this may take a while)")
+    if not os.path.exists(DATA_DIR):
+        st.write("Downloading and extracting all data... (this may take a while)")
         r = requests.get(DATA_URL, stream=True)
         with open("data.zip", "wb") as f:
             for chunk in r.iter_content(chunk_size=8192):
                 f.write(chunk)
         with zipfile.ZipFile("data.zip", "r") as zip_ref:
             zip_ref.extractall(".")
-    return DATA_PATH
+    return DATA_DIR  
 
+# Call setup_data first
+data_dir = setup_data()
+
+# Now you can reference any file inside the data folder:
+dict_path = os.path.join(data_dir, "filtered.json")
 
 # Load JSON -> Dictionary
 def load_dictionary(file_path):
@@ -48,9 +53,7 @@ def load_dictionary(file_path):
             dictionary[eng] = trans_list[0]
     return dictionary
 
-dict_path = "./data/filtered.json"
 dictionary = load_dictionary(dict_path)
-print(f"✅ Dictionary loading success, total number of entries: {len(dictionary)}")
 
 # 3. Clean the translated text
 
