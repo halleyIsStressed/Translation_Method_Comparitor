@@ -1,7 +1,7 @@
 transformers 
 sentencepiece 
 torch
-googletrans==4.0.2
+googletrans==4.0.0-rc1
 https://github.com/kpu/kenlm/archive/master.zip
 streamlit
 sacrebleu
