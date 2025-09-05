@@ -96,10 +96,6 @@ def lookup(word: str) -> str:
     raw = dictionary.get(word, "")
     return clean_translation_text(raw)
 
-# NLTK Initialisation & Participle + Word Form Reduction
-nltk.download('wordnet')
-nltk.download('omw-1.4')
-
 lemmatizer = WordNetLemmatizer()
 
 def analyze(sentence):
