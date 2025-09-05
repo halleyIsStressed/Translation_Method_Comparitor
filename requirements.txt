@@ -4,3 +4,4 @@ torch
 deep-translator
 streamlit
 sacrebleu
+nltk
