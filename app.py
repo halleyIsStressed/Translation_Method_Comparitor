@@ -47,7 +47,7 @@ def load_dictionary(file_path):
             dictionary[eng] = trans_list[0]
     return dictionary
 
-dict_path = "/content/data/MyDrive/AI Assignment Colab/data/filtered.json"
+dict_path = "./data/filtered.json"
 dictionary = load_dictionary(dict_path)
 print(f"✅ Dictionary loading success, total number of entries: {len(dictionary)}")
 
