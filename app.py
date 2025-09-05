@@ -8,13 +8,30 @@ import streamlit as st
 import itertools
 import sacrebleu
 import requests
+import zipfile
 import nltk
 import math
 import json
 import re
+import os
 nltk.download('punkt')
 nltk.download('punkt_tab')
 nltk.download('stopwords')
+
+DATA_URL = "https://github.com/<username>/<repo>/releases/download/v1.0/data.zip"
+
+# Extract to ./data/ if it doesn't exist
+if not os.path.exists("data"):
+    st.write("Downloading data files...")
+    r = requests.get(DATA_URL)
+    with open("data.zip", "wb") as f:
+        f.write(r.content)
+
+    st.write("Extracting data files...")
+    with zipfile.ZipFile("data.zip", "r") as zip_ref:
+        zip_ref.extractall(".")
+
+    st.write("Data ready!")
 
 
 # Load JSON -> Dictionary
@@ -141,7 +158,7 @@ def expand_contractions(sentence):
 # -----------------------------
 # 载入 JSON dataset
 # -----------------------------
-dict_path = "/content/data/MyDrive/AI Assignment Colab/data/filtered.json"  # 改成你的路径
+dict_path = "./data/filtered.json"  # 改成你的路径
 with open(dict_path, "r", encoding="utf-8") as f:
     raw_data = json.load(f)
 
@@ -319,8 +336,8 @@ def generate_translation(sentence):
 input_sentence = ""
 
 # Loading the NMT model
-nmtTokenizer = MarianTokenizer.from_pretrained("./data/MyDrive/Translation_Method_Comparitor/data/fine_tuned_marian")
-nmtModel = MarianMTModel.from_pretrained("./data/MyDrive/Translation_Method_Comparitor/data/fine_tuned_marian")
+nmtTokenizer = MarianTokenizer.from_pretrained("./data/fine_tuned_marian")
+nmtModel = MarianMTModel.from_pretrained("./data/fine_tuned_marian")
 
 # === Load ARPA LM into dictionaries ===
 def load_arpa(filepath):
@@ -368,8 +385,8 @@ def ngram_lm_score(sentence, lm_dict):
     return score
 
 # === Load resources ===
-lm_dict = load_arpa("./data/MyDrive/Translation_Method_Comparitor/data/Chinese_LM.arpa")
-with open("./data/MyDrive/Translation_Method_Comparitor/data/En_Cn_Probs.json", "r", encoding="utf-8") as f:
+lm_dict = load_arpa("./data/Chinese_LM.arpa")
+with open("./data/En_Cn_Probs.json", "r", encoding="utf-8") as f:
     en_cn_probs = json.load(f)
 
 alpha = 0.5
