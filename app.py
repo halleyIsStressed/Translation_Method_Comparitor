@@ -432,5 +432,6 @@ if st.button("Translate"):
             
 if st.button("Run SMT Translation (Warning, could crash the app!)"):
     lm_dict, en_cn_probs = load_smt_resources()  # Lazy load
-    output = sentence_decode(user_input, lm_dict, en_cn_probs)
+    smt_input = re.sub(r'[^\w\s]', '', smt_input)
+    st.write(f"SMT Output\t: {sentence_decode(user_input, lm_dict, en_cn_probs)})
     st.write(output)
