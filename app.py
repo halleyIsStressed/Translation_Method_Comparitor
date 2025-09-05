@@ -7,9 +7,9 @@ from deep_translator import GoogleTranslator
 from nltk.stem import WordNetLemmatizer
 from collections import defaultdict
 
+import streamlit as st
 import itertools
 import sacrebleu
-import streamlit
 import requests
 import kenlm
 import nltk
