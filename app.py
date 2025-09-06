@@ -48,7 +48,7 @@ st.title("Practical Comparison: RBMT vs. SMT vs. NMT vs. Google Translate")
 input_sentence = st.text_input("Please enter an English sentence:")
 reference = st.text_input("Enter the Reference Translation:")
 
-
+translate_btn = st.button("Translate")
 if translate_btn and input_sentence:
     nmt_input = input_sentence
     google_input = input_sentence
