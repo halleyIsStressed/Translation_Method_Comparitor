@@ -1,26 +1,18 @@
 from transformers import MarianMTModel, MarianTokenizer
 from deep_translator import GoogleTranslator
-from nltk.stem import WordNetLemmatizer
-from collections import defaultdict
-from transformers import pipeline
-
 import streamlit as st
-import itertools
 import sacrebleu
 import requests
 import zipfile
-import joblib
-import nltk
-import math
-import json
-import re
 import os
 
 DATA_URL = "https://github.com/halleyIsStressed/Translation_Method_Comparitor/releases/download/v1.0/data.zip"
 DATA_DIR = "./data" 
 NMT_MODEL = os.path.join(DATA_DIR, "fine_tuned_marian")
 
-
+# -----------------------------
+# Setup / Download data
+# -----------------------------
 @st.cache_resource
 def setup_data():
     if not os.path.exists(DATA_DIR):
@@ -33,9 +25,11 @@ def setup_data():
             zip_ref.extractall(".")
     return DATA_DIR
 
-input_sentence = ""
+setup_data()
 
-# Loading the NMT model
+# -----------------------------
+# Load NMT model
+# -----------------------------
 @st.cache_resource
 def load_nmt_model(model_dir=NMT_MODEL):
     tokenizer = MarianTokenizer.from_pretrained(model_dir)
@@ -44,29 +38,31 @@ def load_nmt_model(model_dir=NMT_MODEL):
 
 nmtTokenizer, nmtModel = load_nmt_model()
 
-st.title("Practical Comparison: RBMT vs. SMT vs. NMT vs. Google Translate")
+# -----------------------------
+# Streamlit UI
+# -----------------------------
+st.title("Practical Comparison: NMT vs. Google Translate")
+
 input_sentence = st.text_input("Please enter an English sentence:")
 reference = st.text_input("Enter the Reference Translation:")
 
+translate_btn = st.button("Translate")
 
 if translate_btn and input_sentence:
-    nmt_input = input_sentence
-    google_input = input_sentence
-
-    # Running NMT Translation
-    inputs = nmtTokenizer(nmt_input, return_tensors="pt", padding=True, truncation=True)
-    translated_tokens = nmtModel.generate(**inputs)
+    # --- NMT Translation ---
+    nmt_inputs = nmtTokenizer(input_sentence, return_tensors="pt", padding=True, truncation=True)
+    translated_tokens = nmtModel.generate(**nmt_inputs)
     nmt_output = nmtTokenizer.decode(translated_tokens[0], skip_special_tokens=True)
 
-    # Running Google Translation
-    google_output = GoogleTranslator(source="en", target="zh-CN").translate(google_input)
+    # --- Google Translate ---
+    google_output = GoogleTranslator(source="en", target="zh-CN").translate(input_sentence)
     
-    # Display translation results 
+    # --- Display Results ---
     st.markdown("### Translation Results")
-    
     st.markdown(f"**NMT Output:** {nmt_output}")
     st.markdown(f"**Google Output:** {google_output}")
     
+    # --- BLEU Scores if reference provided ---
     if reference:
         nmt_bleu = sacrebleu.sentence_bleu(nmt_output, [reference], tokenize='zh') 
         google_bleu = sacrebleu.sentence_bleu(google_output, [reference], tokenize='zh')
